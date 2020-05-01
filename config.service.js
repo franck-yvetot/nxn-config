@@ -39,16 +39,19 @@ class configSce
         let content = null;
         let config = null;
         let foundPath = path;
+        const exts = ['','.json','.yml','.yaml'];
 
         // Read file
         if(dirPaths)
         {
             dirPaths.forEach(dir => {
-                const p = dir+path;
-                if(!content && self.existsConfig(p)) {
-                    content = fs.readFileSync(p);
-                    foundPath = p;
-                }
+                exts.forEach(ext=> {
+                    const p = dir+path+ext;
+                    if(!content && self.existsConfig(p)) {
+                        content = fs.readFileSync(p);
+                        foundPath = p;
+                    }                
+                });
             });
 
             if(!this.dirPaths)
@@ -61,7 +64,7 @@ class configSce
         if(!content)
             debug.log('boot with no config');        
 
-        if(path.endsWith("yaml") || path.endsWith("yml"))
+        if(foundPath.endsWith("yaml") || foundPath.endsWith("yml"))
         {
             debug.log('YAML boot config : '+foundPath);
             config = yaml.safeLoad(content);
