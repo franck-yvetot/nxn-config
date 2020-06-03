@@ -1,6 +1,7 @@
 const fs = require('fs');
 let debug= console;
 const yaml = require('js-yaml');
+const mapper = require("./variables.service");
 
 /**
  * 
@@ -13,6 +14,7 @@ class configSce
         this.app = null;
         this.config = {};
         this.dirPaths = [];
+        this.env = '';
     }
 
     init(dirPaths) {
@@ -31,8 +33,32 @@ class configSce
         }
     }
  
+    mapVariables(config,variables) {
+        return mapper.mapConfig(config,variables);
+    }
 
-    loadConfig(path,dirPaths) {
+    loadVariables(path,dirPaths,env='') {
+        this.variables = this.loadConfig(path,dirPaths);
+    }
+
+    applyVariables(config,variables,path) {
+       
+        if(variables)
+        {
+            config = this.mapVariables(config,variables);
+
+            if(false && path)
+                fs.writeFile(path+'_parsed.yml',yaml.safeDump(config),(err) => {
+                    if (err) {
+                        console.log(err);
+                    }
+                });
+        }
+
+        return config;
+    }
+
+    loadConfig(path,dirPaths,variables=null) {
         var self = this;
 
         dirPaths =  dirPaths || this.dirPaths;
@@ -72,6 +98,16 @@ class configSce
         else {
             debug.log('JSON boot config : '+foundPath);
             config = JSON.parse(content);
+        }
+
+        if(variables)
+        {
+            config = this.mapVariables(config,variables);  
+            fs.writeFile(foundPath+'_parsed.yml',yaml.safeDump(config),(err) => {
+                if (err) {
+                    console.log(err);
+                }
+            });
         }
 
         return config;
