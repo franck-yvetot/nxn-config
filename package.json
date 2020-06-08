@@ -4,7 +4,7 @@
   "description": "config loader in json or yaml format",
   "main": "config.service.js",
   "dependencies": {
-    "js-yaml": "^3.13.1"
+    "js-yaml": "^3.14.0"
   },
   "devDependencies": {},
   "scripts": {

@@ -34,7 +34,7 @@ class configSce
     }
  
     mapVariables(config,variables) {
-        return mapper.mapConfig(config,variables);
+        return mapper.mapConfig(config,variables,this);
     }
 
     loadVariables(path,dirPaths,env='') {
@@ -72,7 +72,7 @@ class configSce
         {
             dirPaths.forEach(dir => {
                 exts.forEach(ext=> {
-                    const p = dir+path+ext;
+                    const p = dir+'/'+path+ext;
                     if(!content && self.existsConfig(p)) {
                         content = fs.readFileSync(p);
                         foundPath = p;
@@ -80,7 +80,7 @@ class configSce
                 });
             });
 
-            if(!this.dirPaths)
+            if(!this.dirPaths || !this.dirPaths.length)
                 this.dirPaths = dirPaths;
         }
         
@@ -100,9 +100,35 @@ class configSce
             config = JSON.parse(content);
         }
 
-        if(variables)
+        let $variables;
+        if(config.$variables)
         {
+            if(typeof config.$variables == "string")
+            {
+                // $ref()
+                let res = this.mapVariables({variables:config.$variables},variables);
+                $variables = res.variables;    
+            }
+            else
+            {
+                // inline list
+                $variables = config.$variables;
+            }
+
+            // apply parent variables
+        if(variables)
+                $variables = this.mapVariables($variables,variables);
+        }
+
+        if(variables || $variables)
+        {
+            variables = variables || {};
+            $variables = $variables || {}
+            variables = {...variables,...$variables};
+
             config = this.mapVariables(config,variables);  
+
+            if(config.$dump_config)
             fs.writeFile(foundPath+'_parsed.yml',yaml.safeDump(config),(err) => {
                 if (err) {
                     console.log(err);

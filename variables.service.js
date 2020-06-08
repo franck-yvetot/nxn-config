@@ -1,7 +1,7 @@
 const crypto = require('crypto')   
 const {objectSce,stringSce} = require("@nxn/ext");
 // const querystring = require("querystring");
-const config = require('@nxn/config');
+// const configSce = require('./config.service');
 
 const pipes = {
     id : formatId,
@@ -22,8 +22,7 @@ const pipes = {
     no_accents : stringSce.removeAccents,
 
     env:env,
-    argv: i => argv(i),
-    load: include
+    argv: i => argv(i)
 };
 
 class MapSce
@@ -87,6 +86,12 @@ class MapSce
             return this.mapPattern(pattern,obj);
         }       
 
+        if(pattern.startsWith && pattern.startsWith('$ref(') && pattern.endsWith(')'))
+        {
+            let inc = pattern.trim().slice(5).slice(0,-1);
+            return this.configSce.loadConfig(inc,null,obj);
+        }       
+
         reg = reg || /\$\{([a-z 0-9_|]+)\}/gi;
         const rep =pattern.replace(reg,
             (match,p1) => { 
@@ -113,8 +118,10 @@ class MapSce
         return to;
     }
 
-    mapConfig(config,variables)
+    mapConfig(config,variables,configSce)
     {
+        this.configSce = configSce;
+        
         return this.mapObj(config,variables);
     }
 }
@@ -147,6 +154,10 @@ function timestamp(date) {
     return d.getTime();
 }
   
+function not_found(pattern,path) {
+    throw new Error("Variable not found : "+pattern+' at '+path);
+}
+
   function dateString(date,withSec) {
     const d = date || new Date();
   
@@ -169,10 +180,6 @@ function env(v) {
 function argv(v) {
     const i = parseInt(v);
     return process.argv[v];
-}
-
-function include(path) {
-    return config.loadConfig(path);
 }
 
 module.exports = new MapSce();
