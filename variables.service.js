@@ -2,6 +2,7 @@ const crypto = require('crypto')
 const {objectSce,stringSce} = require("@nxn/ext");
 // const querystring = require("querystring");
 // const configSce = require('./config.service');
+const { parse, eval } = require('expression-eval');
 
 const pipes = {
     id : formatId,
@@ -70,6 +71,12 @@ class MapSce
         return obj2;
     }
 
+    evalExpression(expr,obj) {
+        const ast = parse(expr); 
+        const value = eval(ast, obj); 
+        return value;
+    }
+
     mapFieldMacros(fname,obj,map,reg) {
         let pattern = map[fname];
 
@@ -78,19 +85,28 @@ class MapSce
 
         pattern = pattern.trim();
 
-        if(pattern.startsWith && pattern.startsWith('${') && pattern.endsWith('}'))
+        if(pattern.startsWith)
         {
-            pattern = pattern.trim().slice(2).slice(0,-1);
-            pattern = pattern || fname; // supports = or =name
-
-            return this.mapPattern(pattern,obj);
-        }       
-
-        if(pattern.startsWith && pattern.startsWith('$ref(') && pattern.endsWith(')'))
-        {
-            let inc = pattern.trim().slice(5).slice(0,-1);
-            return this.configSce.loadConfig(inc,null,obj);
-        }       
+            if(pattern.startsWith('${{') && pattern.endsWith('}}'))
+            {
+                pattern = pattern.trim().slice(3).slice(0,-2);
+                return this.evalExpression(pattern,obj);
+            }       
+    
+            if(pattern.startsWith('${') && pattern.endsWith('}'))
+            {
+                pattern = pattern.trim().slice(2).slice(0,-1);
+                pattern = pattern || fname; // supports = or =name
+    
+                return this.mapPattern(pattern,obj);
+            }       
+    
+            if(pattern.startsWith('$ref(') && pattern.endsWith(')'))
+            {
+                let inc = pattern.trim().slice(5).slice(0,-1);
+                return this.configSce.loadConfig(inc,null,obj);
+            }
+        }
 
         reg = reg || /\$\{([a-z 0-9_|]+)\}/gi;
         const rep =pattern.replace(reg,
