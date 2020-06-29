@@ -1,5 +1,5 @@
 const crypto = require('crypto')   
-const {objectSce,stringSce} = require("@nxn/ext");
+const {objectSce,stringSce,arraySce} = require("@nxn/ext");
 // const querystring = require("querystring");
 // const configSce = require('./config.service');
 const { parse, eval } = require('expression-eval');
@@ -77,7 +77,7 @@ class MapSce
         return value;
     }
 
-    mapFieldMacros(fname,obj,map,reg) {
+    mapFieldMacros(fname,obj,map,regVar,regExpr) {
         let pattern = map[fname];
 
         if(!pattern)
@@ -87,18 +87,32 @@ class MapSce
 
         if(pattern.startsWith)
         {
+            let isString = false;
             if(pattern.startsWith('${{') && pattern.endsWith('}}'))
             {
-                pattern = pattern.trim().slice(3).slice(0,-2);
-                return this.evalExpression(pattern,obj);
+                let pattern2 = pattern.trim().slice(3).slice(0,-2);
+                if(pattern2.indexOf('${')==-1)
+                {
+                    return this.evalExpression(pattern2,obj);
+                }
+                else
+                    // expression and other stuff like viariables
+                    isString = true;
             }       
     
-            if(pattern.startsWith('${') && pattern.endsWith('}'))
+            // ${VAR} => copy value as is (with same type etc.)
+            if(!isString && pattern.startsWith('${') && pattern.endsWith('}'))
             {
-                pattern = pattern.trim().slice(2).slice(0,-1);
-                pattern = pattern || fname; // supports = or =name
-    
-                return this.mapPattern(pattern,obj);
+                let pattern2 = pattern.trim().slice(2).slice(0,-1);
+                // check if no other ${VAR2} in the pattern
+                if(pattern2.indexOf('${')==-1)
+                {
+                    pattern2 = pattern2 || fname; // supports = or =name
+                    return this.mapPattern(pattern2,obj);
+                }
+                else
+                    // includes other variables, so must be a string...
+                    isString = true;
             }       
     
             if(pattern.startsWith('$ref(') && pattern.endsWith(')'))
@@ -108,8 +122,16 @@ class MapSce
             }
         }
 
-        reg = reg || /\$\{([a-z 0-9_|]+)\}/gi;
-        const rep =pattern.replace(reg,
+        // process ${{ expression }}
+        regExpr = regExpr || /\$\{\{([^\}]+)\}\}/gi;
+        let rep =pattern.replace(regExpr,
+            (match,p1) => { 
+                return this.evalExpression(p1,obj);
+            });
+
+        // process ${VARIABLES}
+        regVar = regVar || /\$\{([a-z 0-9_|]+)\}/gi;
+        rep =rep.replace(regVar,
             (match,p1) => { 
                 return this.mapPattern(p1,obj);
             });
@@ -124,6 +146,27 @@ class MapSce
         objectSce.forEachSync(map,(v,k) => {
             if(typeof v =="string")
                 to[k] = this.mapFieldMacros(k,from,map,reg)
+            else if(v instanceof Array)
+                to[k] = this.mapArray(v,from);
+            else  if(typeof v =="object")
+                to[k] = this.mapObj(v,from);
+            else
+                // boolean
+                to[k] = v;
+        });
+
+        return to;
+    }
+
+    mapArray(map,from,reg)
+    {
+        let to = [];
+
+        arraySce.forEachSync(map,(v,k) => {
+            if(typeof v =="string")
+                to[k] = this.mapFieldMacros(k,from,map,reg)
+            else if(v instanceof Array)
+                to[k] = this.mapArray(v,from);
             else  if(typeof v =="object")
                 to[k] = this.mapObj(v,from);
             else

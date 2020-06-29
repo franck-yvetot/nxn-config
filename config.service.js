@@ -58,6 +58,17 @@ class configSce
         return config;
     }
 
+    loadCleanConfig(path,dirPaths,variables=null) {
+        let config = this.loadConfig(path,dirPaths,variables);
+        if(config.$path)
+            delete config.$path;
+
+        if(config.$variables)
+            delete config.$variables;
+
+        return config;
+    }
+
     loadConfig(path,dirPaths,variables=null) {
         var self = this;
 
@@ -100,6 +111,8 @@ class configSce
             config = JSON.parse(content);
         }
 
+        config.$path = foundPath;
+
         let $variables;
         if(config.$variables)
         {
@@ -129,14 +142,18 @@ class configSce
             config = this.mapVariables(config,variables);  
 
             if(config.$dump_config)
-            fs.writeFile(foundPath+'_parsed.yml',yaml.safeDump(config),(err) => {
+                this.saveConfig(foundPath+'_parsed.yml',config);
+        }
+
+        return config;
+    }
+
+    saveConfig(path,config) {
+        fs.writeFile(path,yaml.safeDump(config),(err) => {
                 if (err) {
                     console.log(err);
                 }
             });
-        }
-
-        return config;
     }
 }
 
