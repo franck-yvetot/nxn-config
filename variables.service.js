@@ -56,8 +56,9 @@ class MapSce
         let obj2 = obj;
         attribs.forEach(k=> 
             obj2 && 
+                (k in obj2) ? 
                 (obj2=obj2[k])
-                    || not_found(patt,k)
+                    : not_found(patt,k)
         );
 
         // now pipe the value to filters
