@@ -144,16 +144,41 @@ class MapSce
     {
         let to = {};
 
+        /*
+        for (let k in map)
+        {
+            if(k=='$merge')
+            {
+                let v2 = this.mapObj(map[k],from);               
+                this.addIncludes(conf2,v2);
+                map = this.merge(map,v2);
+            }
+        }
+        */
+
         objectSce.forEachSync(map,(v,k) => {
+            let v2;
             if(typeof v =="string")
-                to[k] = this.mapFieldMacros(k,from,map,reg)
+                v2 = this.mapFieldMacros(k,from,map,reg)
             else if(v instanceof Array)
-                to[k] = this.mapArray(v,from);
+                v2 = this.mapArray(v,from);
             else  if(typeof v =="object")
-                to[k] = this.mapObj(v,from);
+                v2 = this.mapObj(v,from);
             else
                 // boolean
-                to[k] = v;
+                v2 = v;
+
+            if(typeof v2 == "undefined")
+                return;
+
+            if(k=='$includes')
+            {
+                this.addIncludes(to,v2);
+                //delete map[k];
+            }
+            else
+
+                to[k] = v2;
         });
 
         return to;
@@ -164,18 +189,100 @@ class MapSce
         let to = [];
 
         arraySce.forEachSync(map,(v,k) => {
+            let v2;
             if(typeof v =="string")
-                to[k] = this.mapFieldMacros(k,from,map,reg)
+                v2 = this.mapFieldMacros(k,from,map,reg)
             else if(v instanceof Array)
-                to[k] = this.mapArray(v,from);
+                v2 = this.mapArray(v,from);
             else  if(typeof v =="object")
-                to[k] = this.mapObj(v,from);
+                v2 = this.mapObj(v,from);
             else
                 // boolean
-                to[k] = v;
+                v2 = v;
+
+            if(typeof v2 == "undefined")
+                return;
+
+            if(k=='$includes')
+            {
+                this.addIncludes(to,v2);
+            }
+            else
+                to[k] = v2;
         });
 
         return to;
+    }
+
+    mergeDeep (target, source)  {
+        if (typeof target == "object" && typeof source == "object") {
+            for (const key in source) {
+                if (source[key] === null && (target[key] === undefined || target[key] === null)) {
+                    target[key] = null;
+                } else if (source[key] instanceof Array) {
+                    if (!target[key]) target[key] = [];
+                    //concatenate arrays
+                    target[key] = target[key].concat(source[key]);
+                } else if (typeof source[key] == "object") {
+                    if (!target[key]) target[key] = {};
+                    this.mergeDeep(target[key], source[key]);
+                } else {
+                    target[key] = source[key];
+                }
+            }
+        }
+        return target;
+    }
+
+    addIncludes(map,v2) {
+        if(map instanceof Array)
+        {
+            if(typeof v2 =="string")
+                map.push(v2);
+            else if(v2 instanceof Array)
+            {
+                for(let i = 0 ;i<v2.length; i++)
+                    map.push(v2[i]);
+            }
+            else  if(typeof v2 =="object")
+            {
+                for(let p in v2)
+                    map.push(v2[p]);
+            }
+            else
+                // boolean
+                map.push(v2)
+        }
+        else  if(typeof map =="object")
+        {
+            if(typeof v2 =="string")
+            {
+                debug.error("invalid format : cant add a string into an object "+v2);
+                throw new Error("invalid format : cant add a string into an object "+v2);
+            }
+            else if(v2 instanceof Array)
+            {
+                for(let i = 0 ;i<v2.length; i++)
+                    this.addIncludes(map,v2[i]);
+            }
+            else  if(typeof v2 =="object")
+            {                
+                for(let p in v2)
+                {
+                    if(p != "$path")
+                        if(typeof map[p] == "undefined")
+                            map[p] = v2[p];
+                        else
+                            // map[p] = this.mergeDeep (map[p], v2[p]);
+                            map[p] = {...map[p], ...v2[p]};
+                    }
+            }
+            else
+            {
+                debug.error("invalid format : cant include a simple value in an object "+v2);
+                throw new Error("invalid format : cant add a string into an object "+v2);
+            }
+        }
     }
 
     mapConfig(config,variables,configSce)

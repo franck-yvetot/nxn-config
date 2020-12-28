@@ -142,7 +142,11 @@ class configSce
             config = this.mapVariables(config,variables);  
 
             if(config.$dump_config)
-                this.saveConfig(foundPath+'_parsed.yml',config);
+            {
+                const dumpPath = foundPath+'_parsed.yml';
+                debug.log("dump parsed config to "+dumpPath)
+                this.saveConfig(dumpPath,config);
+            }
         }
 
         return config;
