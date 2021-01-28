@@ -9,6 +9,8 @@ const pipes = {
     base64 : b64,
     decode64 : decodeB64,
     md5:md5,
+    json:JSON.parse,
+    stringify:JSON.stringify,
 
     dateString:dateString,
     timestamp:timestamp,
