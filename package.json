@@ -1,6 +1,6 @@
 {
   "name": "@nxn/config",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "description": "config loader in json or yaml format",
   "main": "config.service.js",
   "dependencies": {
