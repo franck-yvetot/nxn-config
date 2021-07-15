@@ -104,7 +104,12 @@ class configSce
         if(foundPath.endsWith("yaml") || foundPath.endsWith("yml"))
         {
             debug.log('YAML boot config : '+foundPath);
-            config = yaml.safeLoad(content);
+            try {
+                config = yaml.safeLoad(content);                
+            } catch (error) {
+                debug.error('YAML error : '+error.message || error);
+                throw error;
+            }
         }
         else {
             debug.log('JSON boot config : '+foundPath);
