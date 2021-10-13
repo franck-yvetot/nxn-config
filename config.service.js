@@ -21,18 +21,6 @@ class configSce
         this.dirPaths = dirPaths;
     }
 
-    existsConfig(path) {
-        try {
-            if (fs.existsSync(path))
-                return true;
-            else
-                return false;
-          } 
-          catch(err) {
-            return false;
-        }
-    }
- 
     mapVariables(config,variables) {
         return mapper.mapConfig(config,variables,this);
     }
@@ -85,7 +73,7 @@ class configSce
                 exts.forEach(ext=> {
                     const p = dir+'/'+path+ext;
                     if(!content && self.existsConfig(p)) {
-                        content = fs.readFileSync(p);
+                        content = self.readFileSync(p);
                         foundPath = p;
                     }                
                 });
@@ -96,7 +84,7 @@ class configSce
         }
         
         if(!content)
-            content = fs.readFileSync(path);
+            content = self.readFileSync(path);
         
         if(!content)
             debug.log('boot with no config');        
@@ -164,6 +152,36 @@ class configSce
                 }
             });
     }
+
+	// I/O
+    existsConfig(path) {
+        try {
+            if (fs.existsSync(path))
+                return true;
+            else
+                return false;
+          } 
+          catch(err) {
+            return false;
+        }
+    }
+ 
+    readFileSync(p) {
+        try {
+            if(p)
+                return fs.readFileSync(p);
+            else
+            {
+                debug.error("Read config file : empty path "+p);
+                return null;
+            }
+        }
+        catch(error) {
+            debug.error("Error reading "+p);
+            return null;
+        }
+    }
+
 }
 
 module.exports = new configSce();
