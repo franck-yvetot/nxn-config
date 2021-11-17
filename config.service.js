@@ -86,8 +86,11 @@ class configSce
         if(!content)
             content = self.readFileSync(path);
         
-        if(!content)
-            debug.log('boot with no config');        
+		if(!content)
+        {
+            debug.error('boot with no config, missing file '+path);
+            throw "Missing file or config";
+        }
 
         if(foundPath.endsWith("yaml") || foundPath.endsWith("yml"))
         {
