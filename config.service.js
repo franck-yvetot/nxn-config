@@ -89,7 +89,7 @@ class configSce
 		if(!content)
         {
             debug.error('boot with no config, missing file '+path);
-            throw "Missing file or config";
+            throw {message:"Missing file or config : "+path, code:400};
         }
 
         if(foundPath.endsWith("yaml") || foundPath.endsWith("yml"))
