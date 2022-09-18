@@ -47,24 +47,30 @@ class configSce
     }
 
     loadCleanConfig(path,dirPaths,variables=null) {
-        let config = this.loadConfig(path,dirPaths,variables);
-        if(config.$path)
-            delete config.$path;
-
-        if(config.$variables)
-            delete config.$variables;
-
-        return config;
+        try {
+            let config = this.loadConfig(path,dirPaths,variables);
+            if(config.$path)
+                delete config.$path;
+    
+            if(config.$variables)
+                delete config.$variables;
+    
+            return config;            
+        } catch (error) {
+            throw error;
+        }
     }
 
     loadConfig(path,dirPaths,variables=null) {
         var self = this;
 
         dirPaths =  dirPaths || this.dirPaths;
+        dirPaths.push('./');
+        dirPaths.push('');
         let content = null;
         let config = null;
         let foundPath = path;
-        const exts = ['','.json','.yml','.yaml'];
+        const exts = ['.yml','.json','','.yaml'];
 
         // Read file
         if(dirPaths)
@@ -83,13 +89,22 @@ class configSce
                 this.dirPaths = dirPaths;
         }
         
-        if(!content)
-            content = self.readFileSync(path);
+        if(!content) {
+            //             content = self.readFileSync(path);
+
+            dirPaths.forEach(dir => {
+                exts.forEach(ext=> {
+                    const p = (dir+'/'+path+ext).replace(/\/+/g,'/');
+                    debug.error("Tried : "+p);
+                });
+            });                    
+        }
         
 		if(!content)
         {
             debug.error('boot with no config, missing file '+path);
-            throw {message:"Missing file or config : "+path, code:400};
+            let e = {message:"Missing file or config : "+path, code:400};
+            throw e;
         }
 
         if(foundPath.endsWith("yaml") || foundPath.endsWith("yml"))
