@@ -113,7 +113,7 @@ class configSce
             try {
                 config = yaml.safeLoad(content);                
             } catch (error) {
-                debug.error('YAML error : '+error.message || error);
+                debug.error('YAML error in '+foundPath+" : "+error.message || error);
                 throw error;
             }
         }

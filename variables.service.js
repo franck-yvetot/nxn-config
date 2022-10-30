@@ -80,6 +80,25 @@ class MapSce
         return value;
     }
 
+    mapString(pattern,obj, regVar=null,regExpr=null)
+    {
+        // process ${{ expression }}
+        regExpr = regExpr || /\$\{\{([^\}]+)\}\}/gi;
+        let rep =pattern.replace(regExpr,
+            (match,p1) => { 
+                return this.evalExpression(p1,obj);
+            });
+
+        // process ${VARIABLES}
+        regVar = regVar || /\$\{([a-z 0-9_|]+)\}/gi;
+        rep =rep.replace(regVar,
+            (match,p1) => { 
+                return this.mapPattern(p1,obj);
+            });
+
+        return rep;    
+    }             
+
     mapFieldMacros(fname,obj,map,regVar,regExpr) {
         let pattern = map[fname];
 
@@ -121,6 +140,9 @@ class MapSce
             if(pattern.startsWith('$ref(') && pattern.endsWith(')'))
             {
                 let inc = pattern.trim().slice(5).slice(0,-1);
+                if(inc.indexOf("${") > -1)
+                    inc = this.mapString(inc,obj,regVar,regExpr);
+                    
                 return this.configSce.loadConfig(inc,null,obj);
             }
         }
@@ -160,7 +182,13 @@ class MapSce
 
         objectSce.forEachSync(map,(v,k) => {
             let v2;
-            if(typeof v =="string")
+
+            if(k.startsWith('$for'))
+            {
+                let to2 = this.loop(map,v,from,reg);
+                return to2;
+            }
+            else if(typeof v =="string")
                 v2 = this.mapFieldMacros(k,from,map,reg)
             else if(v instanceof Array)
                 v2 = this.mapArray(v,from);
@@ -179,8 +207,19 @@ class MapSce
                 //delete map[k];
             }
             else
-
-                to[k] = v2;
+            {
+                let k2 = k;
+                if(k.indexOf('${') > -1)
+                {
+                    k2 = this.mapString(k,from,reg);
+                }
+                if(to)
+                    to[k2] = v2;
+                else
+                {
+                    let i=0;
+                }
+            }
         });
 
         return to;
@@ -192,6 +231,11 @@ class MapSce
 
         arraySce.forEachSync(map,(v,k) => {
             let v2;
+            if(k.startsWith && k.startsWith('$for'))
+            {
+                to = this.loop(map,v,from,reg);
+                return to;
+            }
             if(typeof v =="string")
                 v2 = this.mapFieldMacros(k,from,map,reg)
             else if(v instanceof Array)
@@ -215,6 +259,98 @@ class MapSce
 
         return to;
     }
+
+    loop(map,v,from,reg) {
+        if(v instanceof Object)
+        {
+            let to = {...map}; 
+            let varName = v.variable || "iter";
+            let content = v.content || {}
+            let list = v.list;
+            if(list.split)
+                list = list.split(',').map(i => i.trim());
+
+            list.forEach(i => {
+                let vars = {...from};
+                vars[varName] = i;
+
+                let v2;                
+                if(content instanceof Object)
+                {
+                    v2 = this.mapObj(content,vars,reg);
+                }                
+                else if(content instanceof Array)
+                {
+                    v2 = this.mapArray(content,vars,reg);
+                }
+                else                
+                    v2 = content;
+
+                this.insertContent(to,v2,vars,reg);
+
+                return to;
+            })
+        }
+    }
+
+    insertContent(map,v2,vars,reg) {
+        if(map instanceof Array)
+        {
+            if(typeof v2 =="string")
+                map.push(v2);
+            else if(v2 instanceof Array)
+            {
+                for(let i = 0 ;i<v2.length; i++)
+                    map.push(v2[i]);
+            }
+            else  if(typeof v2 =="object")
+            {
+                for(let p in v2)
+                {
+                    map.push(v2[p]);
+                }
+            }
+            else
+                // boolean
+                map.push(v2)
+        }
+        else  if(typeof map =="object")
+        {
+            if(typeof v2 =="string")
+            {
+                debug.error("invalid format : cant add a string into an object "+v2);
+                throw new Error("invalid format : cant add a string into an object "+v2);
+            }
+            else if(v2 instanceof Array)
+            {
+                debug.error("invalid format : cant add an array into an object "+v2);
+                throw new Error("invalid format : cant add an array into an object "+v2);
+            }
+            else  if(typeof v2 =="object")
+            {                
+                for(let p in v2)
+                {
+                    if(p != "$path")
+                    {
+                        let p2 = this.mapString(p,vars,reg);
+
+                        if(typeof map[p] == "undefined")
+                            map[p2] = v2[p];
+                        else
+                            // map[p] = this.mergeDeep (map[p], v2[p]);
+                            map[p2] = {...map[p], ...v2[p]};
+                    }
+                }
+            }
+            else
+            {
+                debug.error("invalid format : cant include a simple value in an object "+v2);
+                throw new Error("invalid format : cant add a string into an object "+v2);
+            }
+        }        
+    }
+
+
 
     mergeDeep (target, source)  {
         if (typeof target == "object" && typeof source == "object") {
