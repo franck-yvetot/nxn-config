@@ -1,6 +1,7 @@
 const fs = require('fs');
 let debug= console;
 const yaml = require('js-yaml');
+const { basename,dirname } = require('path');
 const mapper = require("./variables.service");
 
 /**
@@ -21,12 +22,12 @@ class configSce
         this.dirPaths = dirPaths;
     }
 
-    mapVariables(config,variables) {
-        return mapper.mapConfig(config,variables,this);
+    mapVariables(config,variables,curpath=null) {
+        return mapper.mapConfig(config,variables,this,curpath);
     }
 
-    loadVariables(path,dirPaths,env='') {
-        this.variables = this.loadConfig(path,dirPaths);
+    loadVariables(path,dirPaths,env='',curpath=null) {
+        this.variables = this.loadConfig(path,dirPaths,curpath);
     }
 
     applyVariables(config,variables,path) {
@@ -46,9 +47,10 @@ class configSce
         return config;
     }
 
-    loadCleanConfig(path,dirPaths,variables=null) {
-        try {
-            let config = this.loadConfig(path,dirPaths,variables);
+    loadCleanConfig(path,dirPaths,variables=null,curPath=null) {
+        try 
+        {
+            let config = this.loadConfig(path,dirPaths,variables,curPath);
             if(config.$path)
                 delete config.$path;
     
@@ -56,16 +58,22 @@ class configSce
                 delete config.$variables;
     
             return config;            
-        } catch (error) {
+        } 
+        catch (error) 
+        {
             throw error;
         }
+
     }
 
-    loadConfig(path,dirPaths,variables=null) {
+    loadConfig(path,dirPaths,variables=null,curPath=null) {
         var self = this;
 
         dirPaths =  dirPaths || this.dirPaths;
         dirPaths.push('./');
+        if(curPath)
+            dirPaths.push(curPath);
+
         dirPaths.push('');
         let content = null;
         let config = null;
@@ -75,10 +83,13 @@ class configSce
         // Read file
         if(dirPaths)
         {
-            dirPaths.forEach(dir => {
-                exts.forEach(ext=> {
+            dirPaths.forEach(dir => 
+            {
+                exts.forEach(ext => 
+                {
                     const p = dir+'/'+path+ext;
-                    if(!content && self.existsConfig(p)) {
+                    if(!content && self.existsConfig(p)) 
+                    {
                         content = self.readFileSync(p);
                         foundPath = p;
                     }                
@@ -89,11 +100,14 @@ class configSce
                 this.dirPaths = dirPaths;
         }
         
-        if(!content) {
+        if(!content) 
+        {
             //             content = self.readFileSync(path);
 
-            dirPaths.forEach(dir => {
-                exts.forEach(ext=> {
+            dirPaths.forEach(dir => 
+            {
+                exts.forEach(ext => 
+                {
                     const p = (dir+'/'+path+ext).replace(/\/+/g,'/');
                     debug.error("Tried : "+p);
                 });
@@ -102,7 +116,7 @@ class configSce
         
 		if(!content)
         {
-            debug.error('boot with no config, missing file '+path);
+            debug.error('boot with no config, missing file '+path+" from "+curPath);
             let e = {message:"Missing file or config : "+path, code:400};
             throw e;
         }
@@ -110,19 +124,26 @@ class configSce
         if(foundPath.endsWith("yaml") || foundPath.endsWith("yml"))
         {
             debug.log('YAML boot config : '+foundPath);
-            try {
+            try 
+            {
                 config = yaml.safeLoad(content);                
-            } catch (error) {
+            } 
+            catch (error) 
+            {
                 debug.error('YAML error in '+foundPath+" : "+error.message || error);
                 throw error;
             }
         }
-        else {
+        else 
+        {
             debug.log('JSON boot config : '+foundPath);
             config = JSON.parse(content);
         }
 
-        config.$path = foundPath;
+        config = config || {};
+        config.$path = foundPath;            
+
+        let curPath2 = this.$dir = dirname(foundPath);
 
         let $variables;
         if(config.$variables)
@@ -130,7 +151,7 @@ class configSce
             if(typeof config.$variables == "string")
             {
                 // $ref()
-                let res = this.mapVariables({variables:config.$variables},variables);
+                let res = this.mapVariables({variables:config.$variables},variables,curPath2);
                 $variables = res.variables;    
             }
             else
@@ -140,8 +161,8 @@ class configSce
             }
 
             // apply parent variables
-        if(variables)
-                $variables = this.mapVariables($variables,variables);
+            if(variables)
+                $variables = this.mapVariables($variables,variables,curPath2);
         }
 
         if(variables || $variables)
@@ -150,7 +171,7 @@ class configSce
             $variables = $variables || {}
             variables = {...variables,...$variables};
 
-            config = this.mapVariables(config,variables);  
+            config = this.mapVariables(config,variables,curPath2);  
 
             if(config.$dump_config)
             {
@@ -163,16 +184,19 @@ class configSce
         return config;
     }
 
-    saveConfig(path,config) {
-        fs.writeFile(path,yaml.safeDump(config),(err) => {
-                if (err) {
-                    console.log(err);
-                }
-            });
+    saveConfig(path,config) 
+    {
+        fs.writeFile(path,yaml.safeDump(config),(err) => 
+        {
+            if (err) {
+                console.log(err);
+            }
+        });
     }
 
 	// I/O
-    existsConfig(path) {
+    existsConfig(path) 
+    {
         try {
             if (fs.existsSync(path))
                 return true;

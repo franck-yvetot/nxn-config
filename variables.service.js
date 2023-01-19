@@ -48,7 +48,7 @@ class MapSce
         throw new Error("Variable not found : "+pattern+' at '+path);
     }
 
-    mapPattern(pattern,obj)
+    mapPattern(pattern,obj,path=null)
     {
         let aPipes = pattern.split('|'); // supports yyy.xxx|id|lower|base64
         let patt = aPipes.shift(); 
@@ -74,32 +74,32 @@ class MapSce
         return obj2;
     }
 
-    evalExpression(expr,obj) {
+    evalExpression(expr,obj,curPath=null) {
         const ast = parse(expr); 
         const value = eval(ast, obj); 
         return value;
     }
 
-    mapString(pattern,obj, regVar=null,regExpr=null)
+    mapString(pattern,obj, regVar=null,regExpr=null,curPath=null)
     {
         // process ${{ expression }}
         regExpr = regExpr || /\$\{\{([^\}]+)\}\}/gi;
         let rep =pattern.replace(regExpr,
             (match,p1) => { 
-                return this.evalExpression(p1,obj);
+                return this.evalExpression(p1,obj,curPath);
             });
 
         // process ${VARIABLES}
         regVar = regVar || /\$\{([a-z 0-9_|]+)\}/gi;
         rep =rep.replace(regVar,
             (match,p1) => { 
-                return this.mapPattern(p1,obj);
+                return this.mapPattern(p1,obj,curPath);
             });
 
         return rep;    
     }             
 
-    mapFieldMacros(fname,obj,map,regVar,regExpr) {
+    mapFieldMacros(fname,obj,map,regVar,regExpr,curPath=null) {
         let pattern = map[fname];
 
         if(!pattern)
@@ -115,7 +115,7 @@ class MapSce
                 let pattern2 = pattern.trim().slice(3).slice(0,-2);
                 if(pattern2.indexOf('${')==-1)
                 {
-                    return this.evalExpression(pattern2,obj);
+                    return this.evalExpression(pattern2,obj,curPath);
                 }
                 else
                     // expression and other stuff like viariables
@@ -130,7 +130,7 @@ class MapSce
                 if(pattern2.indexOf('${')==-1)
                 {
                     pattern2 = pattern2 || fname; // supports = or =name
-                    return this.mapPattern(pattern2,obj);
+                    return this.mapPattern(pattern2,obj,curPath);
                 }
                 else
                     // includes other variables, so must be a string...
@@ -143,7 +143,7 @@ class MapSce
                 if(inc.indexOf("${") > -1)
                     inc = this.mapString(inc,obj,regVar,regExpr);
                     
-                return this.configSce.loadConfig(inc,null,obj);
+                return this.configSce.loadConfig(inc,null,obj,curPath);                    
             }
         }
 
@@ -164,7 +164,7 @@ class MapSce
         return rep;    
     }
 
-    mapObj(map,from,reg)
+    mapObj(map,from,reg,curPath=null)
     {
         let to = {};
 
@@ -185,15 +185,15 @@ class MapSce
 
             if(k.startsWith('$for'))
             {
-                let to2 = this.loop(map,v,from,reg);
+                let to2 = this.loop(map,v,from,reg,curPath);
                 return to2;
             }
             else if(typeof v =="string")
-                v2 = this.mapFieldMacros(k,from,map,reg)
+                v2 = this.mapFieldMacros(k,from,map,reg,null,curPath)
             else if(v instanceof Array)
-                v2 = this.mapArray(v,from);
+                v2 = this.mapArray(v,from,null,curPath);
             else  if(typeof v =="object")
-                v2 = this.mapObj(v,from);
+                v2 = this.mapObj(v,from,null,curPath);
             else
                 // boolean
                 v2 = v;
@@ -203,7 +203,7 @@ class MapSce
 
             if(k=='$includes')
             {
-                this.addIncludes(to,v2);
+                this.addIncludes(to,v2,curPath);
                 //delete map[k];
             }
             else
@@ -211,7 +211,7 @@ class MapSce
                 let k2 = k;
                 if(k.indexOf('${') > -1)
                 {
-                    k2 = this.mapString(k,from,reg);
+                    k2 = this.mapString(k,from,reg,curPath);
                 }
                 if(to)
                     to[k2] = v2;
@@ -225,7 +225,7 @@ class MapSce
         return to;
     }
 
-    mapArray(map,from,reg)
+    mapArray(map,from,reg,curPath=null)
     {
         let to = [];
 
@@ -233,15 +233,15 @@ class MapSce
             let v2;
             if(k.startsWith && k.startsWith('$for'))
             {
-                to = this.loop(map,v,from,reg);
+                to = this.loop(map,v,from,reg,curPath);
                 return to;
             }
             if(typeof v =="string")
-                v2 = this.mapFieldMacros(k,from,map,reg)
+                v2 = this.mapFieldMacros(k,from,map,reg,null,curPath)
             else if(v instanceof Array)
-                v2 = this.mapArray(v,from);
+                v2 = this.mapArray(v,from,null,curPath);
             else  if(typeof v =="object")
-                v2 = this.mapObj(v,from);
+                v2 = this.mapObj(v,from,null,curPath);
             else
                 // boolean
                 v2 = v;
@@ -251,7 +251,7 @@ class MapSce
 
             if(k=='$includes')
             {
-                this.addIncludes(to,v2);
+                this.addIncludes(to,v2,curPath);
             }
             else
                 to[k] = v2;
@@ -260,7 +260,7 @@ class MapSce
         return to;
     }
 
-    loop(map,v,from,reg) {
+    loop(map,v,from,reg,path=null) {
         if(v instanceof Object)
         {
             let to = {...map}; 
@@ -277,11 +277,11 @@ class MapSce
                 let v2;                
                 if(content instanceof Object)
                 {
-                    v2 = this.mapObj(content,vars,reg);
+                    v2 = this.mapObj(content,vars,null,reg);
                 }                
                 else if(content instanceof Array)
                 {
-                    v2 = this.mapArray(content,vars,reg);
+                    v2 = this.mapArray(content,vars,null,reg);
                 }
                 else                
                     v2 = content;
@@ -293,7 +293,7 @@ class MapSce
         }
     }
 
-    insertContent(map,v2,vars,reg) {
+    insertContent(map,v2,vars,reg,path=null) {
         if(map instanceof Array)
         {
             if(typeof v2 =="string")
@@ -372,7 +372,8 @@ class MapSce
         return target;
     }
 
-    addIncludes(map,v2) {
+    addIncludes(map,v2,curPath=null) 
+    {
         if(map instanceof Array)
         {
             if(typeof v2 =="string")
@@ -401,7 +402,7 @@ class MapSce
             else if(v2 instanceof Array)
             {
                 for(let i = 0 ;i<v2.length; i++)
-                    this.addIncludes(map,v2[i]);
+                    this.addIncludes(map,v2[i],curPath);
             }
             else  if(typeof v2 =="object")
             {                
@@ -423,11 +424,11 @@ class MapSce
         }
     }
 
-    mapConfig(config,variables,configSce)
+    mapConfig(config,variables,configSce,curPath=null)
     {
         this.configSce = configSce;
         
-        return this.mapObj(config,variables);
+        return this.mapObj(config,variables,null,curPath);
     }
 }
 
