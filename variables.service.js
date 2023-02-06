@@ -60,7 +60,7 @@ class MapSce
             obj2 && 
                 (k in obj2) ? 
                 (obj2=obj2[k])
-                    : not_found(patt,k)
+                    : not_found(patt,k,path)
         );
 
         // now pipe the value to filters
@@ -460,7 +460,7 @@ function timestamp(date) {
     return d.getTime();
 }
   
-function not_found(pattern,path) {
+function not_found(pattern,k,path) {
     throw new Error("Variable not found : "+pattern+' at '+path);
 }
 
