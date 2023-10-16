@@ -143,6 +143,7 @@ class MapSce
                 if(inc.indexOf("${") > -1)
                     inc = this.mapString(inc,obj,regVar,regExpr);
                     
+                console.log("---> CONFIG : $ref("+inc+") curPath="+curPath);
                 return this.configSce.loadConfig(inc,null,obj,curPath);                    
             }
         }

@@ -69,7 +69,7 @@ class configSce
     loadConfig(path,dirPaths,variables=null,curPath=null) {
         var self = this;
 
-        dirPaths =  dirPaths || this.dirPaths;
+        dirPaths =  dirPaths || [...this.dirPaths];
         dirPaths.push('./');
         if(curPath)
             dirPaths.push(curPath);
@@ -92,6 +92,7 @@ class configSce
                     {
                         content = self.readFileSync(p);
                         foundPath = p;
+                        console.log("--- found : "+p);
                     }                
                 });
             });
@@ -177,21 +178,24 @@ class configSce
             {
                 const dumpPath = foundPath+'_parsed.yml';
                 debug.log("dump parsed config to "+dumpPath)
-                this.saveConfig(dumpPath,config);
+                this.saveConfig(dumpPath,config,true);
             }
         }
 
         return config;
     }
 
-    saveConfig(path,config) 
+    saveConfig(path,config,sync=false) 
     {
-        fs.writeFile(path,yaml.safeDump(config),(err) => 
-        {
-            if (err) {
-                console.log(err);
-            }
-        });
+        if(sync)
+            fs.writeFileSync(path,yaml.safeDump(config));
+        else
+            fs.writeFile(path,yaml.safeDump(config),(err) => 
+            {
+                if (err) {
+                    console.log(err);
+                }
+            });
     }
 
 	// I/O
