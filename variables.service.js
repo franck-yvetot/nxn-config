@@ -490,3 +490,4 @@ function argv(v) {
 }
 
 module.exports = new MapSce();
+module.exports.MapSce = MapSce;

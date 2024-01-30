@@ -9,7 +9,7 @@ const mapper = require("./variables.service");
  *  read a json or yaml config file from defined paths
  * 
  * */ 
-class configSce 
+class ConfigSce 
 {
     constructor() {
         this.app = null;
@@ -230,4 +230,5 @@ class configSce
 
 }
 
-module.exports = new configSce();
+module.exports = new ConfigSce();
+module.exports.ConfigSce = ConfigSce;
