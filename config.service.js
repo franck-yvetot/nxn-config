@@ -22,6 +22,13 @@ class ConfigSce
         this.dirPaths = dirPaths;
     }
 
+    /**
+     * 
+     * @param {Record<string,any>} config 
+     * @param {Record<string,any>} variables 
+     * @param {string} curpath
+     * @returns 
+     */
     mapVariables(config,variables,curpath=null) {
         return mapper.mapConfig(config,variables,this,curpath);
     }
@@ -231,4 +238,5 @@ class ConfigSce
 }
 
 module.exports = new ConfigSce();
+
 module.exports.ConfigSce = ConfigSce;
