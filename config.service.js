@@ -134,7 +134,7 @@ class ConfigSce
             debug.log('YAML boot config : '+foundPath);
             try 
             {
-                config = yaml.safeLoad(content);                
+                config = yaml.load(content);                
             } 
             catch (error) 
             {
