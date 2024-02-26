@@ -99,7 +99,7 @@ class ConfigSce
                     {
                         content = self.readFileSync(p);
                         foundPath = p;
-                        console.log("--- found : "+p);
+                        console.log("--- found : "+p+" size="+content.length);
                     }                
                 });
             });
@@ -145,7 +145,12 @@ class ConfigSce
         else 
         {
             debug.log('JSON boot config : '+foundPath);
-            config = JSON.parse(content);
+            try {
+                config = JSON.parse(content);
+            }
+            catch(error) {
+                debug.error("wrong json format "+content);
+            }
         }
 
         config = config || {};
