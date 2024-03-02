@@ -94,7 +94,7 @@ class ConfigSce
             {
                 exts.forEach(ext => 
                 {
-                    const p = dir+'/'+path+ext;
+                    const p = (dir && (dir+'/') || '')+path+ext;
                     if(!content && self.existsConfig(p)) 
                     {
                         content = self.readFileSync(p);
